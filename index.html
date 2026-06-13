@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="考研打卡">
+  <meta name="theme-color" content="#1a1a2e">
+  <meta name="description" content="考研复习计划打卡 - 记录学习时长，智能提醒">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>考研打卡</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ===== 顶部标题栏 ===== -->
+  <header id="header">
+    <h1>📚 考研打卡</h1>
+    <span id="header-date"></span>
+  </header>
+
+  <!-- ===== 页面容器 ===== -->
+  <main id="app">
+
+    <!-- ===== 首页：今日概览 ===== -->
+    <section id="page-home" class="page active">
+
+      <!-- 今日统计卡片 -->
+      <div class="card today-card">
+        <div class="today-total">
+          <div class="today-label">今日学习</div>
+          <div class="today-time" id="today-total">0 小时 0 分钟</div>
+          <div class="today-bar-wrap">
+            <div class="today-bar" id="today-bar" style="width:0%"></div>
+            <span class="today-goal" id="today-goal-text">目标 8h</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 各科今日进度 -->
+      <div class="card">
+        <div class="card-title">各科进度</div>
+        <div id="subject-progress-list" class="subject-progress-list">
+          <div class="empty-hint">还没有科目，去「设置」添加吧</div>
+        </div>
+      </div>
+
+      <!-- 今日记录 -->
+      <div class="card">
+        <div class="card-title">今日记录</div>
+        <div id="today-records-list" class="records-list">
+          <div class="empty-hint">今天还没有学习记录</div>
+        </div>
+      </div>
+
+      <!-- 快捷开始 -->
+      <button class="fab" id="quick-start-btn" title="快速开始学习">▶</button>
+    </section>
+
+    <!-- ===== 计时页 ===== -->
+    <section id="page-timer" class="page">
+      <!-- 选科目 -->
+      <div class="card" id="subject-select-card">
+        <div class="card-title">选择科目开始学习</div>
+        <div id="subject-select-list" class="subject-grid">
+          <div class="empty-hint">还没有科目，去「设置」添加吧</div>
+        </div>
+      </div>
+
+      <!-- 计时面板 -->
+      <div class="card timer-card hidden" id="timer-panel">
+        <div class="timer-subject" id="timer-subject-name"></div>
+        <div class="timer-display" id="timer-display">00:00:00</div>
+        <div class="timer-status" id="timer-status">准备开始</div>
+        <div class="timer-buttons">
+          <button class="btn btn-outline hidden" id="btn-pause">⏸ 暂停</button>
+          <button class="btn btn-primary" id="btn-start">▶ 开始</button>
+          <button class="btn btn-danger hidden" id="btn-stop">⏹ 结束</button>
+        </div>
+      </div>
+
+      <!-- 手动补录 -->
+      <div class="card">
+        <div class="card-title">✍️ 手动补录</div>
+        <div class="manual-form">
+          <select id="manual-subject" class="input">
+            <option value="">选择科目</option>
+          </select>
+          <input type="number" id="manual-hours" class="input" placeholder="小时" min="0" max="24" value="0" style="flex:1">
+          <input type="number" id="manual-minutes" class="input" placeholder="分钟" min="0" max="59" value="0" style="flex:1">
+          <input type="date" id="manual-date" class="input" style="flex:1.5">
+          <textarea id="manual-note" class="input" placeholder="备注（可选）" rows="1" style="flex:2"></textarea>
+          <button class="btn btn-primary btn-sm" id="btn-manual-save">保存</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 统计页 ===== -->
+    <section id="page-stats" class="page">
+      <div class="card">
+        <div class="card-title">📊 每日学习时长（近7天）</div>
+        <canvas id="chart-weekly" height="220"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">🥧 本周科目分布</div>
+        <canvas id="chart-subjects" height="220"></canvas>
+      </div>
+      <div class="card">
+        <div class="card-title">📈 累计统计</div>
+        <div class="stats-summary" id="stats-summary">
+          <div class="stat-item"><span class="stat-val" id="stat-week">0h</span><span class="stat-lbl">本周</span></div>
+          <div class="stat-item"><span class="stat-val" id="stat-month">0h</span><span class="stat-lbl">本月</span></div>
+          <div class="stat-item"><span class="stat-val" id="stat-total">0h</span><span class="stat-lbl">总计</span></div>
+          <div class="stat-item"><span class="stat-val" id="stat-streak">0天</span><span class="stat-lbl">连续打卡</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== 设置页（科目 + 提醒） ===== -->
+    <section id="page-settings" class="page">
+
+      <!-- 科目管理 -->
+      <div class="card">
+        <div class="card-title">📖 科目管理</div>
+        <div id="subject-manage-list" class="subject-manage-list">
+          <div class="empty-hint">还没有科目，点下方添加</div>
+        </div>
+        <div class="add-form">
+          <input type="text" id="new-subject-name" class="input" placeholder="科目名称，如：数学">
+          <input type="color" id="new-subject-color" class="input color-input" value="#4A90D9">
+          <button class="btn btn-primary btn-sm" id="btn-add-subject">+ 添加</button>
+        </div>
+      </div>
+
+      <!-- 每日目标 -->
+      <div class="card">
+        <div class="card-title">🎯 每日学习目标</div>
+        <div class="add-form">
+          <input type="number" id="daily-goal" class="input" placeholder="小时" min="1" max="24" value="8" style="width:80px">
+          <span>小时/天</span>
+          <button class="btn btn-outline btn-sm" id="btn-save-goal">保存</button>
+        </div>
+      </div>
+
+      <!-- 提醒管理 -->
+      <div class="card">
+        <div class="card-title">⏰ 学习提醒</div>
+        <div id="reminder-list" class="reminder-list">
+          <div class="empty-hint">还没有提醒，点下方添加</div>
+        </div>
+        <div class="add-form reminder-form">
+          <input type="text" id="new-reminder-label" class="input" placeholder="提醒名称，如：上午数学">
+          <input type="time" id="new-reminder-time" class="input" value="09:00">
+          <div class="day-selector" id="day-selector">
+            <button class="day-btn" data-day="1">一</button>
+            <button class="day-btn" data-day="2">二</button>
+            <button class="day-btn" data-day="3">三</button>
+            <button class="day-btn" data-day="4">四</button>
+            <button class="day-btn" data-day="5">五</button>
+            <button class="day-btn" data-day="6">六</button>
+            <button class="day-btn" data-day="0">日</button>
+          </div>
+          <select id="new-reminder-subject" class="input" style="flex:1">
+            <option value="">关联科目（可选）</option>
+          </select>
+          <button class="btn btn-primary btn-sm" id="btn-add-reminder">+ 添加提醒</button>
+        </div>
+      </div>
+
+      <!-- 数据管理 -->
+      <div class="card">
+        <div class="card-title">🗂️ 数据管理</div>
+        <div class="data-actions">
+          <button class="btn btn-outline btn-sm" id="btn-export">📤 导出数据</button>
+          <button class="btn btn-outline btn-sm" id="btn-import-label" onclick="document.getElementById('import-file').click()">📥 导入数据</button>
+          <input type="file" id="import-file" accept=".json" hidden>
+          <button class="btn btn-danger btn-sm" id="btn-clear">🗑 清空数据</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ===== 底部导航 ===== -->
+  <nav id="bottom-nav">
+    <button class="nav-btn active" data-page="home">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">首页</span>
+    </button>
+    <button class="nav-btn" data-page="timer">
+      <span class="nav-icon">⏱️</span>
+      <span class="nav-label">计时</span>
+    </button>
+    <button class="nav-btn" data-page="stats">
+      <span class="nav-icon">📊</span>
+      <span class="nav-label">统计</span>
+    </button>
+    <button class="nav-btn" data-page="settings">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">设置</span>
+    </button>
+  </nav>
+
+  <!-- ===== 全局弹窗（编辑提醒用） ===== -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal" id="modal-content"></div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast hidden" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
