@@ -417,60 +417,67 @@ function renderStats() {
     pieColors.push(s ? s.color : '#ccc');
   });
 
-  // 柱状图
-  const ctx1 = $('#chart-weekly');
-  if (chartWeekly) chartWeekly.destroy();
-  chartWeekly = new Chart(ctx1, {
-    type: 'bar',
-    data: {
-      labels: dayLabels,
-      datasets: [{
-        label: '学习时长 (小时)',
-        data: dayData,
-        backgroundColor: dayData.map(v => v > 0 ? '#4A6CF7' : '#CBD5E1'),
-        borderRadius: 8,
-        borderSkipped: false,
-      }],
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { beginAtZero: true, ticks: { callback: v => v + 'h' }, grid: { color: '#F1F5F9' } },
-        x: { ticks: { font: { size: 11 } }, grid: { display: false } },
-      },
-    },
-  });
-
-  // 饼图
-  const ctx2 = $('#chart-subjects');
-  if (chartSubjects) chartSubjects.destroy();
-  if (pieData.length === 0 || pieData.every(v => v === 0)) {
-    chartSubjects = new Chart(ctx2, {
-      type: 'doughnut',
-      data: { labels: ['暂无数据'], datasets: [{ data: [1], backgroundColor: ['#E2E8F0'] }] },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom' } },
-      },
-    });
-  } else {
-    chartSubjects = new Chart(ctx2, {
-      type: 'doughnut',
+  // 柱状图（Chart.js 不可用时跳过）
+  if (typeof Chart !== 'undefined') {
+    const ctx1 = $('#chart-weekly');
+    if (chartWeekly) chartWeekly.destroy();
+    chartWeekly = new Chart(ctx1, {
+      type: 'bar',
       data: {
-        labels: pieLabels,
-        datasets: [{ data: pieData, backgroundColor: pieColors, borderWidth: 2, borderColor: '#fff' }],
+        labels: dayLabels,
+        datasets: [{
+          label: '学习时长 (小时)',
+          data: dayData,
+          backgroundColor: dayData.map(v => v > 0 ? '#4A6CF7' : '#CBD5E1'),
+          borderRadius: 8,
+          borderSkipped: false,
+        }],
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } },
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { callback: v => v + 'h' }, grid: { color: '#F1F5F9' } },
+          x: { ticks: { font: { size: 11 } }, grid: { display: false } },
         },
       },
     });
+
+    // 饼图
+    const ctx2 = $('#chart-subjects');
+    if (chartSubjects) chartSubjects.destroy();
+    if (pieData.length === 0 || pieData.every(v => v === 0)) {
+      chartSubjects = new Chart(ctx2, {
+        type: 'doughnut',
+        data: { labels: ['暂无数据'], datasets: [{ data: [1], backgroundColor: ['#E2E8F0'] }] },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } },
+        },
+      });
+    } else {
+      chartSubjects = new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+          labels: pieLabels,
+          datasets: [{ data: pieData, backgroundColor: pieColors, borderWidth: 2, borderColor: '#fff' }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } },
+          },
+        },
+      });
+    }
+  } else {
+    // Chart.js 未加载，隐藏图表框
+    const chartCards = $$('.card:has(canvas)');
+    chartCards.forEach(c => c.style.opacity = '0.5');
+    console.warn('Chart.js not loaded, charts disabled');
   }
 
   // 统计数字
