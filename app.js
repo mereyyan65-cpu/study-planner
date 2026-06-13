@@ -378,106 +378,71 @@ function manualSave() {
 }
 
 // ===== 渲染：统计页 =====
-let chartWeekly = null;
-let chartSubjects = null;
-
 function renderStats() {
   const subjects = DB.subjects;
   const records = DB.records;
   const ws = weekStart();
   const todayStr = today();
 
-  // 近7天每日时长
-  const dayLabels = [];
-  const dayData = [];
+  // ===== 纯 CSS 柱状图：近7天每日时长 =====
+  const barsContainer = $('#chart-weekly-bars');
+  const goalHours = DB.settings.dailyGoal || 8;
+
+  // 先找到最大值来决定柱状图比例
+  const dayInfo = [];
+  let maxHours = 0;
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().slice(0, 10);
-    const dayName = `${d.getMonth()+1}/${d.getDate()} 周${'日一二三四五六'[d.getDay()]}`;
-    dayLabels.push(dayName);
+    const dayLabel = `${d.getMonth()+1}/${d.getDate()}\n周${'日一二三四五六'[d.getDay()]}`;
     const total = records.filter(r => r.date === dateStr).reduce((s, r) => s + r.duration, 0);
-    dayData.push(Math.round(total / 3600 * 10) / 10);
+    const hours = Math.round(total / 3600 * 10) / 10;
+    dayInfo.push({ label: dayLabel, hours });
+    if (hours > maxHours) maxHours = hours;
   }
+  maxHours = Math.max(maxHours, goalHours, 1);
 
-  // 本周科目分布
+  barsContainer.innerHTML = dayInfo.map(d => {
+    const pct = Math.round((d.hours / maxHours) * 100);
+    const isZero = d.hours === 0;
+    return `
+      <div class="chart-bar-col">
+        <span class="chart-bar-val">${d.hours}h</span>
+        <div class="chart-bar-fill ${isZero ? 'zero' : ''}" style="height:${Math.max(pct, 2)}%"></div>
+        <span class="chart-bar-label">${d.label.replace('\n','<br>')}</span>
+      </div>`;
+  }).join('');
+
+  // ===== 纯 HTML 科目分布 =====
+  const subjContainer = $('#chart-subjects-bars');
   const weekRecords = records.filter(r => r.date >= ws && r.date <= todayStr);
   const subjectData = {};
+  let totalWeekSec = 0;
   weekRecords.forEach(r => {
     subjectData[r.subjectId] = (subjectData[r.subjectId] || 0) + r.duration;
+    totalWeekSec += r.duration;
   });
 
-  const pieLabels = [];
-  const pieData = [];
-  const pieColors = [];
-  Object.entries(subjectData).forEach(([sid, sec]) => {
-    const s = DB.getSubject(sid);
-    pieLabels.push(s ? s.name : '未知');
-    pieData.push(Math.round(sec / 3600 * 10) / 10);
-    pieColors.push(s ? s.color : '#ccc');
-  });
+  const entries = Object.entries(subjectData).sort((a, b) => b[1] - a[1]);
 
-  // 柱状图（Chart.js 不可用时跳过）
-  if (typeof Chart !== 'undefined') {
-    const ctx1 = $('#chart-weekly');
-    if (chartWeekly) chartWeekly.destroy();
-    chartWeekly = new Chart(ctx1, {
-      type: 'bar',
-      data: {
-        labels: dayLabels,
-        datasets: [{
-          label: '学习时长 (小时)',
-          data: dayData,
-          backgroundColor: dayData.map(v => v > 0 ? '#4A6CF7' : '#CBD5E1'),
-          borderRadius: 8,
-          borderSkipped: false,
-        }],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          y: { beginAtZero: true, ticks: { callback: v => v + 'h' }, grid: { color: '#F1F5F9' } },
-          x: { ticks: { font: { size: 11 } }, grid: { display: false } },
-        },
-      },
-    });
-
-    // 饼图
-    const ctx2 = $('#chart-subjects');
-    if (chartSubjects) chartSubjects.destroy();
-    if (pieData.length === 0 || pieData.every(v => v === 0)) {
-      chartSubjects = new Chart(ctx2, {
-        type: 'doughnut',
-        data: { labels: ['暂无数据'], datasets: [{ data: [1], backgroundColor: ['#E2E8F0'] }] },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom' } },
-        },
-      });
-    } else {
-      chartSubjects = new Chart(ctx2, {
-        type: 'doughnut',
-        data: {
-          labels: pieLabels,
-          datasets: [{ data: pieData, backgroundColor: pieColors, borderWidth: 2, borderColor: '#fff' }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'bottom', labels: { padding: 16, usePointStyle: true } },
-          },
-        },
-      });
-    }
+  if (entries.length === 0 || totalWeekSec === 0) {
+    subjContainer.innerHTML = '<div class="no-data-chart">本周暂无学习记录</div>';
   } else {
-    // Chart.js 未加载，隐藏图表框
-    const chartCards = $$('.card:has(canvas)');
-    chartCards.forEach(c => c.style.opacity = '0.5');
-    console.warn('Chart.js not loaded, charts disabled');
+    subjContainer.innerHTML = entries.map(([sid, sec]) => {
+      const s = DB.getSubject(sid);
+      const pct = Math.round((sec / totalWeekSec) * 100);
+      const hours = Math.round(sec / 3600 * 10) / 10;
+      return `
+        <div class="subj-dist-row">
+          <span class="subj-dist-color" style="background:${s?.color || '#ccc'}"></span>
+          <span class="subj-dist-name">${s?.icon || ''} ${s?.name || '未知'}</span>
+          <div class="subj-dist-bar-wrap">
+            <div class="subj-dist-bar-fill" style="width:${pct}%;background:${s?.color || '#ccc'}"></div>
+          </div>
+          <span class="subj-dist-val">${hours}h (${pct}%)</span>
+        </div>`;
+    }).join('');
   }
 
   // 统计数字

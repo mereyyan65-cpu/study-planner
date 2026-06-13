@@ -2,14 +2,13 @@
    Service Worker - 考研打卡 PWA
    ================================================================ */
 
-const CACHE_NAME = 'study-planner-v1';
+const CACHE_NAME = 'study-planner-v2';
 const FILES_TO_CACHE = [
   './',
   'index.html',
   'style.css',
   'app.js',
   'manifest.json',
-  'https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js',
 ];
 
 // 安装：预缓存核心文件

@@ -101,11 +101,11 @@
     <section id="page-stats" class="page">
       <div class="card">
         <div class="card-title">📊 每日学习时长（近7天）</div>
-        <canvas id="chart-weekly" height="220"></canvas>
+        <div id="chart-weekly-bars" class="chart-bars"></div>
       </div>
       <div class="card">
         <div class="card-title">🥧 本周科目分布</div>
-        <canvas id="chart-subjects" height="220"></canvas>
+        <div id="chart-subjects-bars" class="chart-subj-dist"></div>
       </div>
       <div class="card">
         <div class="card-title">📈 累计统计</div>
@@ -211,8 +211,6 @@
   <!-- Toast -->
   <div class="toast hidden" id="toast"></div>
 
-  <!-- Chart.js: 国内 CDN，defer 不阻塞页面 -->
-  <script src="https://cdn.bootcdn.net/ajax/libs/Chart.js/4.4.0/chart.umd.min.js" defer></script>
   <script src="app.js" defer></script>
 </body>
 </html>
